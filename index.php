@@ -8,7 +8,6 @@ $dotenv->load();
 
 $tokenTg = getenv('TOKEN_TELEGRAM');
 $geminiApiKey = getenv('API_KEY_GEMINI');
-var_dump($tokenTg, $geminiApiKey);
 
 $pdo = new PDO('sqlite:my_db.db');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -85,9 +84,7 @@ while (true) {
         # Вытягиваем последний update_id из БД
         $lastUpdateId = $pdo->query("SELECT MAX(update_id) FROM messages")->fetchColumn();
         $offset = $lastUpdateId ? $lastUpdateId + 1 : 0;
-        if (empty($tokenTg)) {
-            die("Telegram token is empty!");
-        }
+
         # Запрос обновлений Tg только по последнему update_id
         $urlUpdate = "https://api.telegram.org/bot$tokenTg/getUpdates?offset=$offset&timeout=20";
         $updates = json_decode(file_get_contents($urlUpdate), true);
