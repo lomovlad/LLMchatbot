@@ -1,3 +1,4 @@
 .env
+.idea
 /vendor
 my_db.db

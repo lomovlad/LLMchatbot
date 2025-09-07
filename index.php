@@ -3,8 +3,8 @@ require __DIR__ . '/vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-define('TOKEN_TELEGRAM', $_ENV['TOKEN_TELEGRAM']);
-define('API_KEY_GEMINI', $_ENV['API_KEY_GEMINI']);
+$tokenTg = getenv('TOKEN_TELEGRAM');
+$geminiApiKey = getenv('API_KEY_GEMINI');
 
 $pdo = new PDO('sqlite:my_db.db');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -16,7 +16,8 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
  * @return void
  */
 function sendMessageTg(int $chat_id, string $text): void {
-    $url = "https://api.telegram.org/bot" . TOKEN_TELEGRAM . "/sendMessage";
+    global $tokenTg;
+    $url = "https://api.telegram.org/bot$tokenTg/sendMessage";
     $maxLength = 4000;
 
     # Проверка на отправку в одно сообщение
@@ -40,7 +41,8 @@ function sendMessageTg(int $chat_id, string $text): void {
  * @return string
  */
 function getGeminiResponse(string $prompt): string {
-    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . API_KEY_GEMINI;
+    global $geminiApiKey;
+    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$geminiApiKey";
     # Готовим данные для отправки
     $data = json_encode([
         "contents" => [
@@ -66,11 +68,11 @@ function getGeminiResponse(string $prompt): string {
     $response = json_decode($result, true);
 
     # Получаем из ответа текст
-    if (isset($response['candidates'][0]['content']['parts'][0]['text'])) {
+    try {
         return $response['candidates'][0]['content']['parts'][0]['text'];
+    } catch (Exception $e) {
+        return "Не удалось получить ответ от Gemini. :(";
     }
-
-    return "Не удалось получить ответ от Gemini. :(";
 }
 
 # Бесконечный цикл работы бота
@@ -81,7 +83,7 @@ while (true) {
         $offset = $lastUpdateId ? $lastUpdateId + 1 : 0;
 
         # Запрос обновлений Tg только по последнему update_id
-        $urlUpdate = "https://api.telegram.org/bot" . TOKEN_TELEGRAM ."/getUpdates?offset=$offset&timeout=20";
+        $urlUpdate = "https://api.telegram.org/bot$tokenTg/getUpdates?offset=$offset&timeout=20";
         $updates = json_decode(file_get_contents($urlUpdate), true);
 
         # Если есть новые сообщения -> обрабатываем их
@@ -126,6 +128,7 @@ while (true) {
         }
     } catch (Exception $ex) {
         echo $ex->getMessage() . PHP_EOL;
+    } finally {
+        sleep(1);
     }
 }
-
