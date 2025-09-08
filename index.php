@@ -73,7 +73,7 @@ function getGeminiResponse(string $prompt, string $keyApiLlm): string {
     # Получаем из ответа текст
     try {
         return $response['candidates'][0]['content']['parts'][0]['text'];
-    } catch (Exception $e) {
+    } catch (Throwable) {
         return "Не удалось получить ответ от Gemini. :(";
     }
 }
@@ -129,8 +129,8 @@ while (true) {
                 }
             }
         }
-    } catch (Exception $ex) {
-        echo $ex->getMessage() . PHP_EOL;
+    } catch (Throwable $e) {
+        echo $e->getMessage() . PHP_EOL;
     } finally {
         sleep(1);
     }
