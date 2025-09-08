@@ -16,11 +16,11 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
  * Функция отправки сообщения пользователю в тг
  * @param int $chat_id
  * @param string $text
+ * @param string $tokenMessenger
  * @return void
  */
-function sendMessageTg(int $chat_id, string $text): void {
-    global $tokenTg;
-    $url = "https://api.telegram.org/bot$tokenTg/sendMessage";
+function sendMessageTg(int $chat_id, string $text, string $tokenMessenger): void {
+    $url = "https://api.telegram.org/bot$tokenMessenger/sendMessage";
     $maxLength = 4000;
 
     # Проверка на отправку в одно сообщение
@@ -41,11 +41,11 @@ function sendMessageTg(int $chat_id, string $text): void {
 /**
  * Функция пересылки сообщения пользователя к gemini
  * @param string $prompt
+ * @param string $keyApiLlm
  * @return string
  */
-function getGeminiResponse(string $prompt): string {
-    global $geminiApiKey;
-    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$geminiApiKey";
+function getGeminiResponse(string $prompt, string $keyApiLlm): string {
+    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$keyApiLlm";
     # Готовим данные для отправки
     $data = json_encode([
         "contents" => [
