@@ -86,7 +86,7 @@ while (true) {
         $offset = $lastUpdateId ? $lastUpdateId + 1 : 0;
 
         # Запрос обновлений Tg только по последнему update_id
-        $urlUpdate = "https://api.telegram.org/bot$tokenTg/getUpdates?offset=$offset&timeout=20";
+        $urlUpdate = "https://api.telegram.org/bot$tokenTg/getUpdates?offset=$offset";
         $updates = json_decode(file_get_contents($urlUpdate), true);
 
         # Если есть новые сообщения -> обрабатываем их
@@ -105,12 +105,12 @@ while (true) {
                         $botResponse = "Привет! Напиши свой вопрос :)";
                     } else {
                         # Отправляем сообщение Gemini и получаем ответ текстом
-                        $botResponse = getGeminiResponse($userMessage);
+                        $botResponse = getGeminiResponse($userMessage, $geminiApiKey);
                     }
 
                     if ($botResponse) {
                         # Отправляем ответ пользователю в тг
-                        sendMessageTg($chat_id, $botResponse);
+                        sendMessageTg($chat_id, $botResponse, $tokenTg);
 
                         # Пишем в БД данные
                         $stmt = $pdo->prepare("
@@ -130,7 +130,9 @@ while (true) {
             }
         }
     } catch (Throwable $e) {
-        echo $e->getMessage() . PHP_EOL;
+        unlink('last_error.txt');
+        file_put_contents('last_error.txt', $e->getMessage());
+        die;
     } finally {
         sleep(1);
     }
