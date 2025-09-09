@@ -2,3 +2,4 @@
 .idea
 /vendor
 my_db.db
+/logs

@@ -2,6 +2,9 @@
 
 namespace App;
 
+use DateTime;
+use DateTimeZone;
+
 class Logger
 {
     public string $logFile;
@@ -22,7 +25,9 @@ class Logger
      */
     public function log(string $message, string $level = 'info'): void
     {
-        $time = date('Y-m-d H:i:s');
+        $dt = new DateTime('now');
+        $dt->setTimezone(new DateTimeZone('Europe/Moscow'));
+        $time = $dt->format('Y-m-d H:i:s');
         $line = "[{$time}] [{$level}] {$message}\n";
         file_put_contents($this->logFile, $line, FILE_APPEND);
     }

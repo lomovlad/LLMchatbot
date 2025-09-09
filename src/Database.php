@@ -13,6 +13,7 @@ class Database
 
     /**
      * @param string $dbPath
+     * @param Logger $logger
      */
     public function __construct(string $dbPath, Logger $logger)
     {
@@ -21,6 +22,7 @@ class Database
     }
 
     /**
+     * Подключаемся к БД
      * @param string $dbPath
      * @return void
      */
@@ -56,17 +58,6 @@ class Database
     }
 
     /**
-     * Метод для коротких запросов выборки с получением ассоц. массива
-     * @param string $sql
-     * @param array $params
-     * @return array
-     */
-    public function fetchAll(string $sql, array $params = []): array
-    {
-        return $this->query($sql, $params)->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
      * Возвращаем максимальный update_id из messages
      * @return int|null
      */
@@ -79,6 +70,7 @@ class Database
     }
 
     /**
+     * Запись собранных данных в БД
      * @param array $data ['chat_id' => int, 'update_id' => int, 'user_message' => string, 'bot_response' => string]
      * @return bool
      */

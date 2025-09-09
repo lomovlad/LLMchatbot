@@ -9,6 +9,7 @@ class Gemini
 
     /**
      * @param string $apiKey
+     * @param Logger $logger
      */
     public function __construct(string $apiKey, Logger $logger)
     {

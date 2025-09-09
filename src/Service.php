@@ -20,7 +20,11 @@ class Service
         $this->gemini = $gemini;
     }
 
-    public function run()
+    /**
+     * Единый запуск
+     * @return void
+     */
+    public function run(): void
     {
         while (true) {
             # Вытягиваем последний update_id из БД
@@ -33,9 +37,16 @@ class Service
             if (!empty($updates['result'])) {
                 $this->handleMessages($updates['result']);
             }
+
+            sleep(1);
         }
     }
 
+    /**
+     * Обработчик сообщений
+     * @param array $messages
+     * @return void
+     */
     private function handleMessages(array $messages): void
     {
         foreach ($messages as $update) {

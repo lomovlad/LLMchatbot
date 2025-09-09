@@ -9,6 +9,7 @@ class Telegram
 
     /**
      * @param string $tokenTg
+     * @param Logger $logger
      */
     public function __construct(string $tokenTg, Logger $logger)
     {
@@ -35,6 +36,7 @@ class Telegram
         }
 
         $this->logger->debug("Получен ответ: " . substr($response, 0, 200) . (strlen($response) > 200 ? '...' : ''));
+
         return $response;
     }
 
@@ -65,6 +67,7 @@ class Telegram
                 "chat_id" => $chat_id,
                 "text" => $chunk
             ]);
+
             sleep(1);
         }
     }
