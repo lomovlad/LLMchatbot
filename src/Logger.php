@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App;
 
 use DateTime;
@@ -7,14 +9,13 @@ use DateTimeZone;
 
 class Logger
 {
-    public string $logFile;
-
     /**
-     * @param string $logFile
+     * @param string $pathToLogFile
      */
-    public function __construct(string $logFile)
+    public function __construct(
+        public string $pathToLogFile
+    )
     {
-        $this->logFile = $logFile;
     }
 
     /**
@@ -29,7 +30,7 @@ class Logger
         $dt->setTimezone(new DateTimeZone('Europe/Moscow'));
         $time = $dt->format('Y-m-d H:i:s');
         $line = "[{$time}] [{$level}] {$message}\n";
-        file_put_contents($this->logFile, $line, FILE_APPEND);
+        file_put_contents($this->pathToLogFile, $line, FILE_APPEND);
     }
 
     /**

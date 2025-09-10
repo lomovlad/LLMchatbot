@@ -1,43 +1,56 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App;
+
+use App\Exception\TelegramResponseException;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 
 class Telegram
 {
     public string $tokenTg;
-    private Logger $logger;
+    private Client $http;
 
     /**
      * @param string $tokenTg
-     * @param Logger $logger
      */
-    public function __construct(string $tokenTg, Logger $logger)
+    public function __construct(string $tokenTg)
     {
-        $this->logger = $logger;
         $this->tokenTg = $tokenTg;
+        $this->http = new Client([
+            'base_uri' => "https://api.telegram.org/bot$this->tokenTg/",
+            'timeout' => 2.0
+        ]);
     }
 
     /**
-     * Универсальный метод для работы с API.
+     * Отправляем запрос API.
      * @param string $method
      * @param array $params
-     * @return string
+     * @return array
+     * @throws TelegramResponseException
      */
-    protected function request(string $method, array $params = []): string
+    protected function sendRequest(string $method, array $params = []): array
     {
-        $url = "https://api.telegram.org/bot{$this->tokenTg}/$method?" . http_build_query($params);
-        $this->logger->debug("Отправка запроса: {$url}");
-        $response =  @file_get_contents($url);
+        try {
+            $response = $this->http->get($method, [
+                'query' => $params
+            ]);
+            $body = (string)$response->getBody();
+            $data = json_decode($body, true);
 
-        if ($response === false) {
-            $error = error_get_last()['message'] ?? 'Неизвестная ошибка';
-            $this->logger->error("Ошибка запроса к Telegram API: " . $error);
-            throw new \RuntimeException("Ошибка запроса к Telegram API: " . $error);
+            if (!isset($data['ok']) || !$data['ok']) {
+                $description = $data['description'] ?? 'неизвестно';
+                throw new TelegramResponseException(
+                    "Ошибка Api Telegram: " . $description);
+            }
+
+            return $data;
+        } catch (GuzzleException $e) {
+            throw new TelegramResponseException("Ошибка запроса к Telegram: " .  $e->getMessage());
         }
-
-        $this->logger->debug("Получен ответ: " . substr($response, 0, 200) . (strlen($response) > 200 ? '...' : ''));
-
-        return $response;
     }
 
     /**
@@ -45,6 +58,7 @@ class Telegram
      * @param int $chat_id
      * @param string $text
      * @return void
+     * @throws TelegramResponseException
      */
     public function sendMessage(int $chat_id, string $text): void
     {
@@ -52,7 +66,7 @@ class Telegram
 
         # Если текст короткий, отправляем сразу
         if (mb_strlen($text, 'UTF-8') <= $maxLength) {
-            $this->request("sendMessage", [
+            $this->sendRequest("sendMessage", [
                 "chat_id" => $chat_id,
                 "text" => $text
             ]);
@@ -63,7 +77,7 @@ class Telegram
         $splitMessages = mb_str_split($text, $maxLength, "UTF-8");
         # Отправляем по частям пользователю
         foreach ($splitMessages as $chunk) {
-            $this->request("sendMessage", [
+            $this->sendRequest("sendMessage", [
                 "chat_id" => $chat_id,
                 "text" => $chunk
             ]);
@@ -76,11 +90,12 @@ class Telegram
      * Получение массива обновлений
      * @param int $offset
      * @return array
+     * @throws TelegramResponseException
      */
     public function getUpdates(int $offset = 0): array
     {
-        $response = $this->request("getUpdates", ["offset" => $offset]);
+        $response = $this->sendRequest("getUpdates", ["offset" => $offset]);
 
-        return json_decode($response, true);
+        return $response['result'] ?? [];
     }
 }

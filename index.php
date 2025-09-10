@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Dotenv\Dotenv;
@@ -18,7 +20,8 @@ $geminiApiKey = getenv('API_KEY_GEMINI');
 $logger = new Logger(__DIR__ . '/logs/app.log');
 
 new Service(
-    new Database('my_db.db', $logger),
-    new Telegram($tokenTg, $logger),
-    new Gemini($geminiApiKey, $logger)
+    new Database('my_db.db'),
+    new Telegram($tokenTg),
+    new Gemini($geminiApiKey),
+    $logger
 )->run();

@@ -1,84 +1,96 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App;
 
+use App\Exception\DatabaseException;
 use PDO;
-use PDOException;
 use PDOStatement;
+use PDOException;
 
 class Database
 {
     public PDO $pdo;
-    private Logger $logger;
 
     /**
-     * @param string $dbPath
-     * @param Logger $logger
+     * @throws DatabaseException
      */
-    public function __construct(string $dbPath, Logger $logger)
+    public function __construct(string $dbPath)
     {
-        $this->logger = $logger;
-        $this->connect($dbPath);
+        try {
+            $this->connect($dbPath);
+        } catch (PDOException $e) {
+            throw new DatabaseException("Не удалось подключиться к базе данных: " . $e->getMessage());
+        }
     }
 
     /**
      * Подключаемся к БД
      * @param string $dbPath
      * @return void
+     * @throws DatabaseException
      */
     private function connect(string $dbPath): void
     {
         try {
             $this->pdo = new PDO("sqlite:" . $dbPath);
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->logger->log("Подключение к БД успешно");
         } catch (PDOException $e) {
-            $this->logger->error("Ошибка подключения к БД: " . $e->getMessage());
-            throw new \RuntimeException("Не удалось подключиться к базе данных: " . $e->getMessage());
+            throw new DatabaseException("Не удалось подключиться к базе данных: " . $e->getMessage());
         }
     }
 
     /**
-     * Универсальный метод запроса к базе
+     * Метод получает результаты выборки  *SELECT
      * @param string $sql
      * @param array $params
-     * @return PDOStatement|bool
+     * @return PDOStatement
+     * @throws DatabaseException
      */
-    public function query(string $sql, array $params = []): PDOStatement|bool
+    public function query(string $sql, array $params = []): PDOStatement
     {
         $stmt = $this->pdo->prepare($sql);
-        $result = $stmt->execute($params);
-        $this->logger->debug("Выполнен SQL запрос: $sql, параметры: " . json_encode($params));
+        $success = $stmt->execute($params);
 
-        if (stripos(trim($sql), 'SELECT') === 0) {
-            return $stmt;
+        if (!$success) {
+            throw new DatabaseException("Ошибка выполнения запроса $sql");
         }
 
-        return $result;
+        return $stmt;
     }
 
     /**
-     * Возвращаем максимальный update_id из messages
-     * @return int|null
+     * Метод для модификаций в базе // UPDATE, INSERT, DELETE
+     * @param string $sql
+     * @param array $params
+     * @return bool
+     * @throws DatabaseException
      */
-    public function getLastUpdateId(): ?int
+    public function execute(string $sql, array $params = []): bool
     {
-        $sql = "SELECT MAX(update_id) FROM messages";
-        $max = $this->query($sql)->fetchColumn();
+        $stmt = $this->pdo->prepare($sql);
+        $success = $stmt->execute($params);
 
-        return $max !== false ? (int)$max : null;
+        if (!$success) {
+            throw new DatabaseException("Ошибка выполнения запроса $sql");
+        }
+
+        return true;
     }
 
     /**
      * Запись собранных данных в БД
-     * @param array $data ['chat_id' => int, 'update_id' => int, 'user_message' => string, 'bot_response' => string]
+     * @param array{chat_id: int, update_id: int, user_message: string, bot_response: string} $data
+     * @param string $tableName
      * @return bool
+     * @throws DatabaseException
      */
-    public function recordData(array $data): bool
+    public function insertData(array $data, string $tableName): bool
     {
-        $sql = "INSERT OR IGNORE INTO messages (chat_id, update_id, user_message, bot_response)
+        $sql = "INSERT OR IGNORE INTO {$tableName} (chat_id, update_id, user_message, bot_response)
                 VALUES (:chat_id, :update_id, :user_message, :bot_response)";
 
-        return $this->query($sql, $data);
+        return $this->execute($sql, $data);
     }
 }

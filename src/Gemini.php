@@ -1,69 +1,70 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App;
+
+use App\Exception\GeminiResponseException;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 
 class Gemini
 {
     public string $apiKey;
-    private Logger $logger;
+    private Client $http;
 
     /**
      * @param string $apiKey
-     * @param Logger $logger
      */
-    public function __construct(string $apiKey, Logger $logger)
+    public function __construct(string $apiKey)
     {
-        $this->logger = $logger;
         $this->apiKey = $apiKey;
+        $this->http = new Client([
+            'base_uri' => "https://generativelanguage.googleapis.com/v1beta/",
+            'timeout' => 2.0
+        ]);
     }
 
     /**
      * Отправка запроса к Gemini API
      * @param string $data
      * @return string
+     * @throws GeminiResponseException
      */
-    public function request(string $data): string
+    public function sendRequest(string $data): string
     {
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$this->apiKey}";
-        $this->logger->debug("Отправка запроса к Gemini: $url, данные: " . substr($data, 0, 200));
+        try {
+            $response = $this->http->post("models/gemini-2.0-flash:generateContent", [
+                'query' => ['key' => $this->apiKey],
+                'headers' => ['Content-Type' => 'application/json'],
+                'body' => $data
+            ]);
 
-        $ch = curl_init();
-        curl_setopt_array($ch, array(
-            CURLOPT_URL => $url,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $data,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json']
-        ));
+            $body = (string)$response->getBody();
 
-        $result = curl_exec($ch);
+            if (!$body) {
+                throw new GeminiResponseException("Пустой ответ от Gemini");
+            }
 
-        if ($result === false) {
-            $error = curl_error($ch);
-            curl_close($ch);
-            $this->logger->error("Ошибка запроса к Gemini: $error");
-            throw new \RuntimeException("Ошибка запроса к Gemini: " . $error);
+            return $body;
+        } catch (GuzzleException $e) {
+            throw new GeminiResponseException("Ошибка запроса к Gemini: " . $e->getMessage());
         }
-
-        curl_close($ch);
-
-        $this->logger->debug("Ответ от Gemini получен: " . $result);
-
-        return $result;
     }
+
 
     /**
      * Разбор ответа от Gemini API. перерабатывает JSON-строку в массив и извлекает конкретный текст
      * @param string $response
      * @return string
+     * @throws GeminiResponseException
      */
     public function parseResponse(string $response): string
     {
         $decoded = json_decode($response, true);
 
         if ($decoded === null) {
-            $this->logger->error("Ошибка разбора ответа Gemini: неверный JSON");
-            throw new \RuntimeException("Нет ответа от Gemini или неверный JSON");
+            throw new GeminiResponseException('Ошибка разбора ответа Gemini: неверный JSON');
         }
 
         return $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '';
@@ -73,6 +74,7 @@ class Gemini
      * Метод готовит промт, отправляет запрос и разбирает ответ
      * @param string $prompt
      * @return string
+     * @throws GeminiResponseException
      */
     public function generateText(string $prompt): string
     {
@@ -87,7 +89,7 @@ class Gemini
             ]
         ]);
 
-        $response = $this->request($data);
+        $response = $this->sendRequest($data);
 
         return $this->parseResponse($response);
     }
