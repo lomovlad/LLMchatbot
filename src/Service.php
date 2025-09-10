@@ -77,9 +77,9 @@ class Service
 
             try {
                 // Обработка стартовой команды
-                if ($userMessage === '/start') {
+                if ($userMessage === '/start' || $userMessage === '') {
                     $botResponse = "Привет! Напиши свой вопрос :)";
-                } elseif ($userMessage !== '') {
+                } else {
                     // Отправляем в Gemini и получаем ответ
                     $botResponse = $this->gemini->generateText($userMessage);
                 }
@@ -98,12 +98,12 @@ class Service
             } finally {
                 try {
                     # Всегда пишем в БД
-                    $this->db->insertData([
+                    $this->db->insertData('messages', [
                         'chat_id' => $chatId,
                         'update_id' => $updateId,
                         'user_message' => $userMessage,
                         'bot_response' => $botResponse
-                    ], 'messages');
+                    ]);
                 } catch (DatabaseException $e) {
                     $this->logger?->error("Ошибка БД при сохранении update: " . $e->getMessage());
                 }

@@ -7,6 +7,7 @@ namespace App;
 use App\Exception\GeminiResponseException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Psr\Http\Message\ResponseInterface;
 
 class Gemini
 {
@@ -21,17 +22,18 @@ class Gemini
         $this->apiKey = $apiKey;
         $this->http = new Client([
             'base_uri' => "https://generativelanguage.googleapis.com/v1beta/",
-            'timeout' => 2.0
+            'timeout' => 10.0,
+            'connect_timeout' => 5.0
         ]);
     }
 
     /**
      * Отправка запроса к Gemini API
      * @param string $data
-     * @return string
+     * @return ResponseInterface
      * @throws GeminiResponseException
      */
-    public function sendRequest(string $data): string
+    public function sendRequest(string $data): ResponseInterface
     {
         try {
             $response = $this->http->post("models/gemini-2.0-flash:generateContent", [
@@ -40,28 +42,27 @@ class Gemini
                 'body' => $data
             ]);
 
-            $body = (string)$response->getBody();
-
-            if (!$body) {
+            if ($response->getBody()->getSize() === 0) {
                 throw new GeminiResponseException("Пустой ответ от Gemini");
             }
 
-            return $body;
+            return $response;
         } catch (GuzzleException $e) {
             throw new GeminiResponseException("Ошибка запроса к Gemini: " . $e->getMessage());
         }
     }
 
-
     /**
      * Разбор ответа от Gemini API. перерабатывает JSON-строку в массив и извлекает конкретный текст
-     * @param string $response
+     * @param ResponseInterface $response
      * @return string
      * @throws GeminiResponseException
      */
-    public function parseResponse(string $response): string
+    public function parseResponse(ResponseInterface $response): string
     {
-        $decoded = json_decode($response, true);
+        $body = $response->getBody()->getContents();
+
+        $decoded = json_decode($body, true);
 
         if ($decoded === null) {
             throw new GeminiResponseException('Ошибка разбора ответа Gemini: неверный JSON');

@@ -21,7 +21,8 @@ class Telegram
         $this->tokenTg = $tokenTg;
         $this->http = new Client([
             'base_uri' => "https://api.telegram.org/bot$this->tokenTg/",
-            'timeout' => 2.0
+            'timeout' => 10.0,
+            'connect_timeout' => 5.0
         ]);
     }
 

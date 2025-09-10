@@ -86,10 +86,17 @@ class Database
      * @return bool
      * @throws DatabaseException
      */
-    public function insertData(array $data, string $tableName): bool
+    public function insertData(string $tableName, array $data): bool
     {
-        $sql = "INSERT OR IGNORE INTO {$tableName} (chat_id, update_id, user_message, bot_response)
-                VALUES (:chat_id, :update_id, :user_message, :bot_response)";
+        $columns = array_keys($data);
+        $placeholders = [];
+
+        foreach ($columns as $column) {
+            $placeholders[] = ':' . $column;
+        }
+
+        $sql = "INSERT OR IGNORE INTO {$tableName} (" . implode(', ', $columns) . ") 
+                VALUES (" . implode(', ', $placeholders) . ")";
 
         return $this->execute($sql, $data);
     }
